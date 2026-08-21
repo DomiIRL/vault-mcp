@@ -25,20 +25,20 @@ var serveCmd = &cobra.Command{
 
 		s.AddTool(mcp.NewTool("vault_ssh",
 			mcp.WithDescription("Run a shell command on a remote host via SSH. The command string is passed directly to the remote shell, so pipes, redirects, and multi-word arguments all work. Credentials are injected from the vault — never exposed."),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. coding-area/luna")),
+			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. homeserver/db")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Remote shell command to execute (passed as-is to the remote shell)")),
 		), handleSSH)
 
 		s.AddTool(mcp.NewTool("vault_ssh_with_stdin",
 			mcp.WithDescription("Run a remote shell command via SSH with explicit stdin content. Use when the remote command reads from stdin and the content contains characters that would break inline echo-pipe embedding (newlines, quotes, backslashes)."),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. coding-area/luna")),
+			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. homeserver/db")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Remote shell command to execute")),
 			mcp.WithString("stdin", mcp.Required(), mcp.Description("Content to feed to the command's stdin")),
 		), handleSSHWithStdin)
 
 		s.AddTool(mcp.NewTool("vault_ssh_put",
 			mcp.WithDescription("Upload a file to a remote host via SFTP. Provide either 'content' (inline text) or 'local_path' (absolute path on this machine) — not both. 'remote_path' must be an absolute path on the remote host. 'mode' is an octal permission string (default 0644)."),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. coding-area/luna")),
+			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. homeserver/db")),
 			mcp.WithString("remote_path", mcp.Required(), mcp.Description("Absolute path on the remote host to write")),
 			mcp.WithString("content", mcp.Description("Inline text content to write")),
 			mcp.WithString("local_path", mcp.Description("Absolute local file path to upload")),
@@ -47,20 +47,20 @@ var serveCmd = &cobra.Command{
 
 		s.AddTool(mcp.NewTool("vault_ssh_get",
 			mcp.WithDescription("Read a file from a remote host via SFTP and return its content as text. Useful for reading config files, logs, or script output without needing 'cat' over SSH."),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. coding-area/luna")),
+			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. homeserver/db")),
 			mcp.WithString("remote_path", mcp.Required(), mcp.Description("Absolute path on the remote host to read")),
 		), handleSSHGet)
 
 		s.AddTool(mcp.NewTool("vault_ssh_exec",
 			mcp.WithDescription("SSH into a host using one service's credentials and run a command with a second service's secrets injected as environment variables. Use when an API or tool is only reachable from a specific remote host (e.g. an internal service accessible only from sol)."),
-			mcp.WithString("ssh_service", mcp.Required(), mcp.Description("Vault service path providing SSH credentials, e.g. coding-area/sol")),
-			mcp.WithString("env_service", mcp.Required(), mcp.Description("Vault service path whose keys are injected as env vars on the remote host, e.g. coding-area/onedev")),
+			mcp.WithString("ssh_service", mcp.Required(), mcp.Description("Vault service path providing SSH credentials, e.g. homeserver/bastion")),
+			mcp.WithString("env_service", mcp.Required(), mcp.Description("Vault service path whose keys are injected as env vars on the remote host, e.g. homeserver/gitea")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Remote shell command to execute (may reference the injected env vars by name)")),
 		), handleSSHExec)
 
 		s.AddTool(mcp.NewTool("vault_exec",
 			mcp.WithDescription("Run a local command with a service's secrets injected as environment variables. Credential values are never visible to Claude."),
-			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. coding-area/cloudflare")),
+			mcp.WithString("service", mcp.Required(), mcp.Description("Vault service path, e.g. homeserver/cloudflare")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Executable to run")),
 			mcp.WithArray("args", mcp.Description("Arguments for the command")),
 		), handleExec)

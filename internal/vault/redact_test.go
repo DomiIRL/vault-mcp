@@ -7,9 +7,9 @@ import (
 
 func testVault() *Vault {
 	v := &Vault{Secrets: Secrets{}, Properties: Secrets{}}
-	v.Set("coding-area/luna", "SSH_HOST", "luna.coding-area.net", true)
-	v.Set("coding-area/luna", "SSH_USER", "root", true)
-	v.Set("coding-area/luna", "SSH_PASSWORD", "hunter2-correct-horse", false)
+	v.Set("homeserver/db", "SSH_HOST", "db.example.com", true)
+	v.Set("homeserver/db", "SSH_USER", "root", true)
+	v.Set("homeserver/db", "SSH_PASSWORD", "hunter2-correct-horse", false)
 	v.Set("cloudflare", "API_TOKEN", "tok_abcdef123456", false)
 	v.Set("tiny", "PIN", "1234", false)
 	return v
@@ -21,7 +21,7 @@ func TestRedact(t *testing.T) {
 	cases := []struct{ in, want string }{
 		{"export SSH_PASSWORD='hunter2-correct-horse'", "export SSH_PASSWORD='[REDACTED]'"},
 		{"curl -H 'Bearer tok_abcdef123456'", "curl -H 'Bearer [REDACTED]'"},
-		{"ssh root@luna.coding-area.net", "ssh root@luna.coding-area.net"},
+		{"ssh root@db.example.com", "ssh root@db.example.com"},
 		{"exit code 1234", "exit code 1234"},
 	}
 	for _, c := range cases {
@@ -45,11 +45,11 @@ func TestSetReclassifies(t *testing.T) {
 }
 
 func TestServiceEnvMerges(t *testing.T) {
-	env, err := testVault().ServiceEnv("coding-area/luna")
+	env, err := testVault().ServiceEnv("homeserver/db")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if env["SSH_HOST"] != "luna.coding-area.net" || env["SSH_PASSWORD"] != "hunter2-correct-horse" {
+	if env["SSH_HOST"] != "db.example.com" || env["SSH_PASSWORD"] != "hunter2-correct-horse" {
 		t.Errorf("ServiceEnv did not merge both halves: %v", env)
 	}
 	if _, err := testVault().ServiceEnv("nope"); err == nil {
@@ -59,10 +59,10 @@ func TestServiceEnvMerges(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	v := testVault()
-	if !v.Delete("coding-area/luna", "SSH_HOST") || v.Has("coding-area/luna", "SSH_HOST") {
+	if !v.Delete("homeserver/db", "SSH_HOST") || v.Has("homeserver/db", "SSH_HOST") {
 		t.Error("Delete did not remove a property")
 	}
-	if v.Delete("coding-area/luna", "MISSING") {
+	if v.Delete("homeserver/db", "MISSING") {
 		t.Error("Delete reported success for a missing key")
 	}
 	if !v.Delete("tiny", "PIN") {
@@ -110,8 +110,8 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v.Properties["coding-area/luna"]["SSH_HOST"] != "luna.coding-area.net" ||
-		v.Secrets["coding-area/luna"]["SSH_PASSWORD"] != "hunter2-correct-horse" {
+	if v.Properties["homeserver/db"]["SSH_HOST"] != "db.example.com" ||
+		v.Secrets["homeserver/db"]["SSH_PASSWORD"] != "hunter2-correct-horse" {
 		t.Errorf("round trip lost the split: %+v", v)
 	}
 	if err := UpdateIndex(v); err != nil {
