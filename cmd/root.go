@@ -32,6 +32,7 @@ func init() {
 		lockCmd,
 		addCmd,
 		removeCmd,
+		mvCmd,
 		listCmd,
 		migrateCmd,
 		passwdCmd,

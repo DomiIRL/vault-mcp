@@ -115,6 +115,28 @@ Both halves merge into one environment, so `DB_HOST` (property) and `DB_PASSWORD
 (`*_HOST`, `*_PORT`, `*_USER`, `*_URL`, `*_ENDPOINT`, `*_BUCKET`, `USERNAME`, `SERVER`)
 and shows you the plan before writing.
 
+## File secrets
+
+Some credentials are whole files: a kubeconfig, a service-account JSON, a private key.
+Store one with `--file` under a key ending in `_FILE_B64`:
+
+```bash
+vault-mcp add --file ~/.kube/config homelab/kube KUBECONFIG_FILE_B64
+```
+
+`exec` and `vault_exec` write it to a private `0600` temp file (in `XDG_RUNTIME_DIR`
+when set, so it stays off disk) and set the name without the suffix to its path, so the
+command sees `KUBECONFIG=/run/user/1000/vault-...`. The file is removed when the command
+exits, and an interrupt is passed to the command rather than killing the proxy first.
+Redaction covers the decoded file and its long tokens too, including PEM lines inside
+an embedded base64 certificate or key. File secrets are not sent over `vault_ssh_exec`.
+
+## Several vaults
+
+`VAULT_ROOT` points at a different vault directory, and the keychain stores one
+passphrase per root, so a second vault (one per agent, per client) has its own
+passphrase next to the default one.
+
 ## SSH proxy
 
 Give a service these keys and `vault_ssh` works against it:
@@ -142,7 +164,9 @@ to define, whether that is an environment, a client, or a machine. On `unlock`,
 | `vault-mcp add <svc> <KEY>` | Add or update a secret (hidden input) |
 | `vault-mcp add -p <svc> <KEY>` | Add or update a property (visible input) |
 | `vault-mcp list [svc]` | List keys; property values printed, secrets not |
+| `vault-mcp add --file <path> <svc> <KEY>_FILE_B64` | Store a whole file as a secret |
 | `vault-mcp remove <svc> <KEY>` | Remove a key |
+| `vault-mcp mv <svc> <new>` | Rename a service, or every service under a prefix ending in `/` |
 | `vault-mcp migrate` | Reclassify address-shaped keys as properties |
 | `vault-mcp ssh <svc> -- <cmd>` | SSH proxy |
 | `vault-mcp exec <svc> -- <cmd>` | Exec with secrets as env vars |
