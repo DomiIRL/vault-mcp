@@ -21,16 +21,19 @@ const (
 )
 
 func StorePassphrase(passphrase string) error {
-	if err := keyring.Set(ringService, ringUser, passphrase); err == nil {
+	if err := keyring.Set(ringService, ringUser+entrySuffix(), passphrase); err == nil {
 		return nil
 	}
 	return storeFile(passphrase)
 }
 
 func LoadPassphrase() (string, error) {
-	pass, err := keyring.Get(ringService, ringUser)
+	pass, err := keyring.Get(ringService, ringUser+entrySuffix())
 	if err == nil {
 		return pass, nil
+	}
+	if entrySuffix() != "" {
+		return loadFile()
 	}
 
 	// Migrate from old secret-tool storage (Linux) or security CLI (macOS).
@@ -46,8 +49,10 @@ func LoadPassphrase() (string, error) {
 }
 
 func DeletePassphrase() error {
-	_ = keyring.Delete(ringService, ringUser)
-	clearLegacy()
+	_ = keyring.Delete(ringService, ringUser+entrySuffix())
+	if entrySuffix() == "" {
+		clearLegacy()
+	}
 	return deleteFile()
 }
 
