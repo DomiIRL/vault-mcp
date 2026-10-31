@@ -52,7 +52,7 @@ var serveCmd = &cobra.Command{
 		), handleSSHGet)
 
 		s.AddTool(mcp.NewTool("vault_ssh_exec",
-			mcp.WithDescription("SSH into a host using one service's credentials and run a command with a second service's secrets injected as environment variables. Use when an API or tool is only reachable from a specific remote host (e.g. an internal service accessible only from sol)."),
+			mcp.WithDescription("SSH into a host using one service's credentials and run a command with a second service's secrets injected as environment variables. Use when an API or tool is only reachable from a specific remote host (e.g. an internal service accessible only from a bastion host)."),
 			mcp.WithString("ssh_service", mcp.Required(), mcp.Description("Vault service path providing SSH credentials, e.g. homeserver/bastion")),
 			mcp.WithString("env_service", mcp.Required(), mcp.Description("Vault service path whose keys are injected as env vars on the remote host, e.g. homeserver/gitea")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Remote shell command to execute (may reference the injected env vars by name)")),

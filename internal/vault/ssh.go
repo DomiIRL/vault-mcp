@@ -197,12 +197,14 @@ func RunSSHWithEnv(sshEnv, extraEnv map[string]string, command string, stdout, s
 }
 
 // shellExportPreamble builds "export K1='v1'; export K2='v2'; " for a remote shell.
+// File secrets are left out: they only materialise locally, and the whole file
+// would otherwise sit on the remote command line.
 func shellExportPreamble(env map[string]string) string {
-	if len(env) == 0 {
-		return ""
-	}
 	var b strings.Builder
 	for k, v := range env {
+		if strings.HasSuffix(k, FileSuffix) {
+			continue
+		}
 		b.WriteString("export ")
 		b.WriteString(k)
 		b.WriteString("='")

@@ -1,7 +1,9 @@
 package vault
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +30,39 @@ func TestRedact(t *testing.T) {
 		if got := Redact(c.in); got != c.want {
 			t.Errorf("Redact(%q) = %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestRedactFileSecretPieces(t *testing.T) {
+	key := "LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUFiY2RlZg=="
+	kubeconfig := "clusters:\n- cluster:\n    server: https://k8s.example.com:6443\n" +
+		"users:\n- user:\n    client-key-data: " + key + "\n"
+	v := testVault()
+	v.Set("homelab/kube", "KUBECONFIG"+FileSuffix, base64.StdEncoding.EncodeToString([]byte(kubeconfig)), false)
+	TrackSecrets(v)
+
+	if got := Redact("client-key-data: " + key); got != "client-key-data: [REDACTED]" {
+		t.Errorf("embedded key not redacted: %q", got)
+	}
+	if got := Redact("server: https://k8s.example.com:6443"); strings.Contains(got, "REDACTED") {
+		t.Errorf("server URL was redacted: %q", got)
+	}
+}
+
+func TestRedactDecodedPEMAndJSON(t *testing.T) {
+	pemBody := "MHcCAQEEIAbcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTU"
+	pem := "-----BEGIN EC PRIVATE KEY-----\n" + pemBody + "\n-----END EC PRIVATE KEY-----\n"
+	keyData := base64.StdEncoding.EncodeToString([]byte(pem))
+	jsonConfig := `{"users":[{"user":{"client-key-data":"` + keyData + `"}}],"server":"https://x.example:6443"}`
+	v := testVault()
+	v.Set("homelab/kube", "KUBECONFIG"+FileSuffix, base64.StdEncoding.EncodeToString([]byte(jsonConfig)), false)
+	TrackSecrets(v)
+
+	if got := Redact(`"client-key-data":"` + keyData + `"`); strings.Contains(got, keyData) {
+		t.Errorf("key data in a JSON kubeconfig not redacted: %q", got)
+	}
+	if got := Redact(pem); strings.Contains(got, pemBody) {
+		t.Errorf("decoded PEM body not redacted: %q", got)
 	}
 }
 

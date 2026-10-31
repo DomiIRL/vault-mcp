@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -11,10 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addProperty bool
+var (
+	addProperty bool
+	addFile     string
+)
 
 var addCmd = &cobra.Command{
-	Use:   "add [--property] <zone/service> <KEY>",
+	Use:   "add [--property | --file <path>] <zone/service> <KEY>",
 	Short: "Add or update a secret (hidden input) or a property (visible input)",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -22,7 +26,20 @@ var addCmd = &cobra.Command{
 
 		var value string
 		var err error
-		if addProperty {
+		if addFile != "" {
+			if addProperty || !strings.HasSuffix(key, vault.FileSuffix) {
+				return fmt.Errorf("--file stores a secret and needs a key ending in %s, e.g. KUBECONFIG%s",
+					vault.FileSuffix, vault.FileSuffix)
+			}
+			var data []byte
+			if data, err = os.ReadFile(addFile); err != nil {
+				return err
+			}
+			if len(data) == 0 {
+				return errors.New("file is empty")
+			}
+			value = base64.StdEncoding.EncodeToString(data)
+		} else if addProperty {
 			fmt.Fprintf(os.Stderr, "Value for %s/%s (property, shown as you type): ", service, key)
 			value, err = readVisible()
 		} else {
@@ -73,6 +90,8 @@ var addCmd = &cobra.Command{
 func init() {
 	addCmd.Flags().BoolVarP(&addProperty, "property", "p", false,
 		"store as a non-secret property — value is echoed while typing and may be printed later")
+	addCmd.Flags().StringVar(&addFile, "file", "",
+		"store a whole file as a secret; vault-mcp exec hands the command a temp file `path` instead")
 }
 
 // readVisible reads one line with the terminal's normal echo on, so a property

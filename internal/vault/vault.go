@@ -87,21 +87,43 @@ func (v *Vault) Delete(service, key string) bool {
 	return found
 }
 
+// Rename moves a service to a new name. A from ending in "/" moves every service under
+// that prefix. Nothing changes if a target name is already taken.
+func (v *Vault) Rename(from, to string) (map[string]string, error) {
+	moves := map[string]string{}
+	for _, svc := range v.Services() {
+		if svc == from {
+			moves[svc] = to
+		} else if strings.HasSuffix(from, "/") && strings.HasPrefix(svc, from) {
+			moves[svc] = to + strings.TrimPrefix(svc, from)
+		}
+	}
+	if len(moves) == 0 {
+		return nil, fmt.Errorf("no service matches %q", from)
+	}
+	for _, dst := range moves {
+		if _, ok := v.Secrets[dst]; ok {
+			return nil, fmt.Errorf("%s already exists", dst)
+		}
+		if _, ok := v.Properties[dst]; ok {
+			return nil, fmt.Errorf("%s already exists", dst)
+		}
+	}
+	for src, dst := range moves {
+		for _, m := range []Secrets{v.Secrets, v.Properties} {
+			if keys, ok := m[src]; ok {
+				m[dst] = keys
+				delete(m, src)
+			}
+		}
+	}
+	return moves, nil
+}
+
 func (v *Vault) Has(service, key string) bool {
 	_, s := v.Secrets[service][key]
 	_, p := v.Properties[service][key]
 	return s || p
-}
-
-// SecretValues returns every value that must be kept out of output.
-func (v *Vault) SecretValues() []string {
-	var out []string
-	for _, keys := range v.Secrets {
-		for _, val := range keys {
-			out = append(out, val)
-		}
-	}
-	return out
 }
 
 func root() string {
