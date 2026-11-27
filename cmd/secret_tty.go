@@ -3,8 +3,12 @@
 package cmd
 
 import (
-	"golang.org/x/term"
+	"bytes"
+	"errors"
+	"io"
 	"os"
+
+	"golang.org/x/term"
 )
 
 func readSecretBytes() ([]byte, error) {
@@ -12,16 +16,13 @@ func readSecretBytes() ([]byte, error) {
 		return term.ReadPassword(int(os.Stdin.Fd()))
 	}
 	// piped input (e.g. in scripts)
-	var buf []byte
-	tmp := make([]byte, 1)
-	for {
-		n, err := os.Stdin.Read(tmp)
-		if n > 0 && tmp[0] != '\n' && tmp[0] != '\r' {
-			buf = append(buf, tmp[0])
-		}
-		if err != nil {
-			break
-		}
+	buf, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return nil, err
+	}
+	buf = bytes.TrimRight(buf, "\r\n")
+	if bytes.ContainsAny(buf, "\r\n") {
+		return nil, errors.New("value spans several lines, store it with add --file")
 	}
 	return buf, nil
 }

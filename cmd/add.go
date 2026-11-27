@@ -10,15 +10,17 @@ import (
 
 	"github.com/DomiIRL/vault-mcp/internal/vault"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var (
 	addProperty bool
 	addFile     string
+	addForce    bool
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add [--property | --file <path>] <zone/service> <KEY>",
+	Use:   "add [--property | --file <path>] [--force] <zone/service> <KEY>",
 	Short: "Add or update a secret (hidden input) or a property (visible input)",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -60,7 +62,11 @@ var addCmd = &cobra.Command{
 			return err
 		}
 
-		if v.Has(service, key) {
+		if v.Has(service, key) && !addForce {
+			// Piped input is used up by the value, so there is nobody to ask.
+			if !term.IsTerminal(int(os.Stdin.Fd())) {
+				return fmt.Errorf("%s/%s already exists, pass --force to overwrite it", service, key)
+			}
 			fmt.Fprintf(os.Stderr, "Warning: %s/%s already exists. Overwrite? [y/N] ", service, key)
 			var answer string
 			fmt.Fscan(os.Stdin, &answer)
@@ -92,6 +98,8 @@ func init() {
 		"store as a non-secret property — value is echoed while typing and may be printed later")
 	addCmd.Flags().StringVar(&addFile, "file", "",
 		"store a whole file as a secret; vault-mcp exec hands the command a temp file `path` instead")
+	addCmd.Flags().BoolVarP(&addForce, "force", "f", false,
+		"overwrite an existing key without asking")
 }
 
 // readVisible reads one line with the terminal's normal echo on, so a property

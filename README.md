@@ -31,6 +31,17 @@ vault-mcp add -p homeserver/db DB_HOST      # a property: input visible, printab
 vault-mcp list                              # key names, plus property values
 ```
 
+A secret can also come from a pipe, which keeps it off the screen and out of your shell
+history (macOS shown):
+
+```bash
+pbpaste | vault-mcp add homeserver/db DB_PASSWORD
+```
+
+Trailing newlines are dropped and a value spanning several lines is refused (use
+`--file`). Replacing an existing key from a pipe needs `--force`. The machine has to be
+registered already, because the passphrase prompt needs a terminal.
+
 The first command walks you through creating the vault and picking a master passphrase.
 Files land in `~/.vault/` (`VAULT_ROOT` overrides the directory):
 
@@ -163,6 +174,7 @@ to define, whether that is an environment, a client, or a machine. On `unlock`,
 |---|---|
 | `vault-mcp add <svc> <KEY>` | Add or update a secret (hidden input) |
 | `vault-mcp add -p <svc> <KEY>` | Add or update a property (visible input) |
+| `vault-mcp add -f <svc> <KEY>` | Overwrite an existing key without asking |
 | `vault-mcp list [svc]` | List keys; property values printed, secrets not |
 | `vault-mcp add --file <path> <svc> <KEY>_FILE_B64` | Store a whole file as a secret |
 | `vault-mcp remove <svc> <KEY>` | Remove a key |
